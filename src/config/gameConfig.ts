@@ -205,7 +205,7 @@ export const gameConfig: GameConfig = {
       title: '月下身影',
       description: '根据收集到的线索，你来到公园。月光下，一个熟悉的身影独自坐在长椅上。她就是你一直在寻找的人——叶青。',
       characterId: 'yeqing',
-      triggerCondition: { minDay: 7, minAffinity: 30, requiredFlags: ['yeqing_all_clues_collected'] },
+      triggerCondition: { minDay: 7, requiredFlags: ['yeqing_all_clues_collected'] },
       choices: [
         {
           id: 'approach',
@@ -309,7 +309,8 @@ export const gameConfig: GameConfig = {
           id: 'ask_xiaoyu',
           text: '问问小雨这是谁的',
           effects: [{ characterId: 'linxiaoyu', affinityChange: 3 }],
-          addClueId: 'yeqing_clue_4'
+          addClueId: 'yeqing_clue_4',
+          addFlag: 'library_bookmark_ask'
         },
         {
           id: 'keep_it',
@@ -377,7 +378,8 @@ export const gameConfig: GameConfig = {
           id: 'curious',
           text: '哦？是什么样的人？',
           effects: [{ characterId: 'sufei', affinityChange: 3 }],
-          addClueId: 'yeqing_clue_2'
+          addClueId: 'yeqing_clue_2',
+          addFlag: 'sufei_talk_about_customer_curious'
         },
         {
           id: 'busy',
@@ -421,9 +423,8 @@ export const gameConfig: GameConfig = {
       characterId: 'yeqing',
       hint: '提升与苏菲的好感度，她可能会告诉你更多',
       unlockCondition: {
-        type: 'affinity',
-        value: 25,
-        characterId: 'sufei'
+        type: 'event',
+        value: 'sufei_talk_about_customer_curious'
       }
     },
     {
@@ -436,7 +437,8 @@ export const gameConfig: GameConfig = {
       unlockCondition: {
         type: 'day',
         value: 4,
-        minDay: 4
+        minDay: 4,
+        timeOfDay: 'night'
       }
     },
     {
@@ -448,7 +450,7 @@ export const gameConfig: GameConfig = {
       hint: '在图书馆的事件中仔细观察',
       unlockCondition: {
         type: 'event',
-        value: 'library_bookmark'
+        value: 'library_bookmark_ask'
       }
     },
     {

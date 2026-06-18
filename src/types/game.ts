@@ -98,6 +98,7 @@ export interface ClueConfig {
     characterId?: string
     minAffinity?: number
     minDay?: number
+    timeOfDay?: TimeOfDay
     requiredFlags?: string[]
   }
 }

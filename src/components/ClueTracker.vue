@@ -9,15 +9,8 @@ const emit = defineEmits<{
 
 const gameStore = useGameStore()
 
-const hiddenCharactersProgress = computed(() => {
+const allCharactersWithClues = computed(() => {
   return gameStore.hiddenCharactersWithClueProgress
-})
-
-const unlockedHiddenCharacters = computed(() => {
-  return gameConfig.characters.filter(c => {
-    const charState = gameStore.characters.find(cs => cs.id === c.id)
-    return c.hidden && charState?.unlocked
-  })
 })
 
 function getClueStatusIcon(collected: boolean) {
@@ -43,20 +36,25 @@ function getProgressColor(progress: number) {
       </div>
 
       <div class="modal-body">
-        <div v-if="hiddenCharactersProgress.length === 0 && unlockedHiddenCharacters.length === 0" class="empty-state">
+        <div v-if="allCharactersWithClues.length === 0" class="empty-state">
           <div class="empty-icon">🔍</div>
           <p>暂无可收集的线索</p>
         </div>
 
-        <div v-for="progress in hiddenCharactersProgress" :key="progress.character.id" class="character-clue-section">
+        <div v-for="progress in allCharactersWithClues" :key="progress.character.id" class="character-clue-section">
           <div class="character-header">
             <div class="character-avatar-wrapper">
-              <span class="character-avatar">{{ progress.character.avatar }}</span>
-              <span class="locked-badge">🔒</span>
+              <span class="character-avatar" :class="{ 'unlocked-avatar': progress.unlocked }">{{ progress.character.avatar }}</span>
+              <span v-if="!progress.unlocked" class="locked-badge">🔒</span>
+              <span v-else class="unlocked-badge">✨</span>
             </div>
             <div class="character-info">
-              <h3 class="character-name">???</h3>
-              <p class="character-hint">神秘角色</p>
+              <h3 class="character-name" :class="{ 'name-revealed': progress.unlocked }">
+                {{ progress.unlocked ? progress.character.name : '???' }}
+              </h3>
+              <p class="character-hint">
+                {{ progress.unlocked ? progress.character.description : '神秘角色' }}
+              </p>
             </div>
             <div class="progress-info">
               <span class="progress-count">{{ progress.collectedCount }}/{{ progress.totalCount }}</span>
@@ -98,20 +96,14 @@ function getProgressColor(progress: number) {
             </div>
           </div>
 
-          <div v-if="progress.progress >= 100" class="unlock-hint">
+          <div v-if="progress.progress >= 100 && !progress.unlocked" class="unlock-hint">
             <span class="hint-icon">✨</span>
             <span>所有线索已收集，继续探索也许能遇到 ta...</span>
           </div>
-        </div>
 
-        <div v-if="unlockedHiddenCharacters.length > 0" class="unlocked-section">
-          <h3 class="section-title">已解锁的神秘角色</h3>
-          <div v-for="char in unlockedHiddenCharacters" :key="char.id" class="unlocked-character">
-            <span class="unlocked-avatar">{{ char.avatar }}</span>
-            <div class="unlocked-info">
-              <span class="unlocked-name">{{ char.name }}</span>
-              <p class="unlocked-desc">{{ char.description }}</p>
-            </div>
+          <div v-if="progress.unlocked" class="unlocked-hint">
+            <span class="hint-icon">🌟</span>
+            <span>已成功解锁 {{ progress.character.name }}！</span>
           </div>
         </div>
       </div>
@@ -232,11 +224,31 @@ function getProgressColor(progress: number) {
   opacity: 0.7;
 }
 
+.character-avatar.unlocked-avatar {
+  filter: none;
+  opacity: 1;
+  background: var(--accent-light);
+}
+
 .locked-badge {
   position: absolute;
   bottom: -4px;
   right: -4px;
   font-size: 14px;
+  background: var(--bg-primary);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unlocked-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 12px;
   background: var(--bg-primary);
   width: 20px;
   height: 20px;
@@ -255,6 +267,10 @@ function getProgressColor(progress: number) {
   font-weight: 600;
   margin: 0 0 2px 0;
   color: var(--text-muted);
+}
+
+.character-name.name-revealed {
+  color: var(--accent-primary);
 }
 
 .character-hint {
@@ -404,60 +420,20 @@ function getProgressColor(progress: number) {
   font-weight: 500;
 }
 
+.unlocked-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #d1fae5, transparent);
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+  font-size: 13px;
+  color: #059669;
+  font-weight: 500;
+}
+
 .hint-icon {
   font-size: 16px;
-}
-
-.unlocked-section {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border-light);
-}
-
-.section-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin: 0 0 16px 0;
-}
-
-.unlocked-character {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-md);
-}
-
-.unlocked-avatar {
-  width: 44px;
-  height: 44px;
-  background: var(--accent-light);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  flex-shrink: 0;
-}
-
-.unlocked-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.unlocked-name {
-  font-size: 14px;
-  font-weight: 600;
-  display: block;
-  margin-bottom: 2px;
-}
-
-.unlocked-desc {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: 1.4;
 }
 </style>

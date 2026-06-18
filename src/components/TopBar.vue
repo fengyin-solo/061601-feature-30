@@ -19,7 +19,9 @@ const hasUncollectedClues = computed(() => {
 })
 
 const totalCollectedClues = computed(() => {
-  return gameStore.hiddenCharactersWithClueProgress.reduce((sum, p) => sum + p.collectedCount, 0)
+  return gameStore.hiddenCharactersWithClueProgress
+    .filter(p => !p.unlocked)
+    .reduce((sum, p) => sum + p.collectedCount, 0)
 })
 </script>
 

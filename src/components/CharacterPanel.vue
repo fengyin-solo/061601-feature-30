@@ -23,7 +23,7 @@ const charactersWithConfig = computed(() => {
 })
 
 const hiddenCharactersProgress = computed(() => {
-  return gameStore.hiddenCharactersWithClueProgress
+  return gameStore.hiddenCharactersWithClueProgress.filter(p => !p.unlocked)
 })
 
 function selectCharacter(id: string) {
