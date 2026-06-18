@@ -52,6 +52,8 @@ export interface EventChoice {
   nextEventId?: string
   unlockCharacterId?: string
   addCardId?: string
+  addClueId?: string
+  addFlag?: string
 }
 
 export interface GameEventConfig {
@@ -83,6 +85,29 @@ export interface ActionConfig {
   energyCost: number
 }
 
+export interface ClueConfig {
+  id: string
+  name: string
+  description: string
+  icon: string
+  characterId: string
+  hint: string
+  unlockCondition: {
+    type: 'event' | 'chat' | 'affinity' | 'day' | 'flag'
+    value: string | number
+    characterId?: string
+    minAffinity?: number
+    minDay?: number
+    requiredFlags?: string[]
+  }
+}
+
+export interface ClueState {
+  id: string
+  collected: boolean
+  collectedAt?: number
+}
+
 export interface GameConfig {
   title: string
   initialResources: number
@@ -101,4 +126,5 @@ export interface GameConfig {
   events: GameEventConfig[]
   actions: ActionConfig[]
   workRewards: { min: number; max: number }
+  clues: ClueConfig[]
 }

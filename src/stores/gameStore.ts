@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { TimeOfDay, ActionType, GameEventConfig, EventChoice } from '../types/game'
+import type { TimeOfDay, ActionType, GameEventConfig, EventChoice, ClueState, ClueConfig } from '../types/game'
 import gameConfig from '../config/gameConfig'
 import {
   clamp,
@@ -40,6 +40,8 @@ export interface HistorySnapshot {
   flags: string[]
   triggeredEvents: string[]
   collectedCards: string[]
+  collectedClues: string[]
+  clues: ClueState[]
   logs: LogEntry[]
 }
 
@@ -65,6 +67,13 @@ export const useGameStore = defineStore('game', () => {
   const flags = ref<string[]>([])
   const triggeredEvents = ref<string[]>([])
   const collectedCards = ref<string[]>([])
+  const clues = ref<ClueState[]>(
+    gameConfig.clues.map(c => ({
+      id: c.id,
+      collected: false
+    }))
+  )
+  const collectedClues = ref<string[]>([])
   const logs = ref<LogEntry[]>([])
   const history = ref<HistorySnapshot[]>([])
   let logIdCounter = 0
@@ -80,6 +89,111 @@ export const useGameStore = defineStore('game', () => {
   const currentCharacterConfig = computed(() =>
     gameConfig.characters.find(c => c.id === selectedCharacterId.value) || null
   )
+
+  const cluesWithConfig = computed(() => {
+    return clues.value.map(clueState => {
+      const config = gameConfig.clues.find(c => c.id === clueState.id)
+      return { state: clueState, config }
+    }).filter(item => item.config) as { state: ClueState; config: ClueConfig }[]
+  })
+
+  const hiddenCharactersWithClueProgress = computed(() => {
+    return gameConfig.characters
+      .filter(c => c.hidden && !characters.value.find(cs => cs.id === c.id)?.unlocked)
+      .map(char => {
+        const charClues = cluesWithConfig.value.filter(c => c.config.characterId === char.id)
+        const collectedCount = charClues.filter(c => c.state.collected).length
+        const totalCount = charClues.length
+        return {
+          character: char,
+          clues: charClues,
+          collectedCount,
+          totalCount,
+          progress: totalCount > 0 ? (collectedCount / totalCount) * 100 : 0
+        }
+      })
+  })
+
+  function getCluesForCharacter(characterId: string) {
+    return cluesWithConfig.value.filter(c => c.config.characterId === characterId)
+  }
+
+  function collectClue(clueId: string) {
+    const clueState = clues.value.find(c => c.id === clueId)
+    if (!clueState || clueState.collected) return false
+
+    clueState.collected = true
+    clueState.collectedAt = Date.now()
+    collectedClues.value.push(clueId)
+
+    const clueConfig = gameConfig.clues.find(c => c.id === clueId)
+    if (clueConfig) {
+      addLog('system', `🔍 发现线索：${clueConfig.name}`, clueConfig.characterId)
+      flags.value.push(`${clueId}_collected`)
+    }
+
+    checkAllCluesCollected(clueConfig?.characterId)
+    return true
+  }
+
+  function checkAllCluesCollected(characterId?: string) {
+    if (!characterId) return
+
+    const charClues = getCluesForCharacter(characterId)
+    const allCollected = charClues.length > 0 && charClues.every(c => c.state.collected)
+
+    if (allCollected && !flags.value.includes(`${characterId}_all_clues_collected`)) {
+      flags.value.push(`${characterId}_all_clues_collected`)
+      const charConfig = gameConfig.characters.find(c => c.id === characterId)
+      addLog('system', `✨ 已收集所有关于 ${charConfig?.name || characterId} 的线索，似乎可以找到 ta 了...`)
+    }
+  }
+
+  function checkClueUnlock(type: string, value: string | number, characterId?: string) {
+    const availableClues = cluesWithConfig.value.filter(c => !c.state.collected)
+
+    for (const clue of availableClues) {
+      const cond = clue.config.unlockCondition
+      if (cond.type !== type) continue
+
+      let shouldUnlock = false
+
+      switch (type) {
+        case 'chat':
+          shouldUnlock = cond.value === value &&
+            cond.characterId === characterId &&
+            (cond.minAffinity === undefined ||
+              (getCharacterState(characterId!)?.affinity ?? 0) >= cond.minAffinity)
+          break
+        case 'affinity':
+          shouldUnlock = cond.characterId === characterId &&
+            typeof value === 'number' &&
+            value >= (cond.value as number)
+          break
+        case 'day':
+          shouldUnlock = typeof value === 'number' &&
+            value >= (cond.minDay ?? cond.value as number)
+          break
+        case 'event':
+          shouldUnlock = cond.value === value
+          break
+        case 'flag':
+          shouldUnlock = cond.requiredFlags?.every(f => flags.value.includes(f)) ?? false
+          break
+      }
+
+      if (shouldUnlock) {
+        collectClue(clue.config.id)
+      }
+    }
+  }
+
+  function addFlag(flag: string) {
+    if (!flags.value.includes(flag)) {
+      flags.value.push(flag)
+      checkClueUnlock('flag', flag)
+    }
+  }
 
   function addLog(type: LogEntry['type'], message: string, characterId?: string) {
     logs.value.push({
@@ -103,6 +217,8 @@ export const useGameStore = defineStore('game', () => {
       flags: [...flags.value],
       triggeredEvents: [...triggeredEvents.value],
       collectedCards: [...collectedCards.value],
+      collectedClues: [...collectedClues.value],
+      clues: JSON.parse(JSON.stringify(clues.value)),
       logs: JSON.parse(JSON.stringify(logs.value))
     })
     if (history.value.length > 100) {
@@ -121,6 +237,8 @@ export const useGameStore = defineStore('game', () => {
     flags.value = [...snapshot.flags]
     triggeredEvents.value = [...snapshot.triggeredEvents]
     collectedCards.value = [...snapshot.collectedCards]
+    collectedClues.value = [...snapshot.collectedClues]
+    clues.value = JSON.parse(JSON.stringify(snapshot.clues))
     logs.value = JSON.parse(JSON.stringify(snapshot.logs))
     history.value = history.value.slice(0, stepIndex)
     addLog('system', `回退到第 ${snapshot.day} 天 ${getTimeLabel(snapshot.timeSlot)}`)
@@ -148,6 +266,7 @@ export const useGameStore = defineStore('game', () => {
     if (char.affinity >= 100 && oldAffinity < 100) {
       checkCardUnlock(characterId, 100)
     }
+    checkClueUnlock('affinity', char.affinity, characterId)
   }
 
   function checkCardUnlock(characterId: string, threshold: number) {
@@ -197,6 +316,7 @@ export const useGameStore = defineStore('game', () => {
       }
     })
 
+    checkClueUnlock('day', day.value)
     addLog('system', `🌅 第 ${day.value} 天开始了`)
   }
 
@@ -258,6 +378,8 @@ export const useGameStore = defineStore('game', () => {
     } else {
       message += '，气氛平平。'
     }
+
+    checkClueUnlock('chat', topic.topic, characterId)
 
     addLog('action', message, characterId)
     advanceTime()
@@ -394,6 +516,15 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
+    if (choice.addClueId) {
+      collectClue(choice.addClueId)
+      checkClueUnlock('event', choice.addClueId)
+    }
+
+    if (choice.addFlag) {
+      addFlag(choice.addFlag)
+    }
+
     addLog('story', `选择了：${choice.text}`)
 
     currentEvent.value = null
@@ -437,6 +568,11 @@ export const useGameStore = defineStore('game', () => {
     flags.value = []
     triggeredEvents.value = []
     collectedCards.value = []
+    clues.value = gameConfig.clues.map(c => ({
+      id: c.id,
+      collected: false
+    }))
+    collectedClues.value = []
     logs.value = []
     history.value = []
     logIdCounter = 0
@@ -465,6 +601,10 @@ export const useGameStore = defineStore('game', () => {
     flags,
     triggeredEvents,
     collectedCards,
+    clues,
+    collectedClues,
+    cluesWithConfig,
+    hiddenCharactersWithClueProgress,
     logs,
     history,
     currentEvent,
@@ -474,8 +614,13 @@ export const useGameStore = defineStore('game', () => {
     saveHistory,
     rollbackToStep,
     getCharacterState,
+    getCluesForCharacter,
     updateCharacterAffinity,
     updateCharacterMood,
+    collectClue,
+    checkClueUnlock,
+    checkAllCluesCollected,
+    addFlag,
     performAction,
     selectCharacter,
     handleEventChoice,

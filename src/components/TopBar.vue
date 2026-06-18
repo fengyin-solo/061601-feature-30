@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { getTimeLabel, getTimeIcon } from '../utils/gameUtils'
 
@@ -6,11 +7,20 @@ const emit = defineEmits<{
   (e: 'toggle-save'): void
   (e: 'toggle-cards'): void
   (e: 'toggle-history'): void
+  (e: 'toggle-clues'): void
   (e: 'toggle-theme'): void
   (e: 'reset'): void
 }>()
 
 const gameStore = useGameStore()
+
+const hasUncollectedClues = computed(() => {
+  return gameStore.hiddenCharactersWithClueProgress.some(p => p.collectedCount > 0 && p.collectedCount < p.totalCount)
+})
+
+const totalCollectedClues = computed(() => {
+  return gameStore.hiddenCharactersWithClueProgress.reduce((sum, p) => sum + p.collectedCount, 0)
+})
 </script>
 
 <template>
@@ -42,6 +52,10 @@ const gameStore = useGameStore()
     <div class="toolbar">
       <button class="toolbar-btn" @click="emit('toggle-cards')" title="卡牌收藏">
         🎴
+      </button>
+      <button class="toolbar-btn" @click="emit('toggle-clues')" title="线索收集">
+        🔍
+        <span v-if="totalCollectedClues > 0" class="badge">{{ totalCollectedClues }}</span>
       </button>
       <button class="toolbar-btn" @click="emit('toggle-history')" title="历史记录">
         📜
@@ -123,6 +137,7 @@ const gameStore = useGameStore()
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .toolbar-btn:hover {
@@ -132,6 +147,23 @@ const gameStore = useGameStore()
 
 .toolbar-btn.reset:hover {
   background: #fee2e2;
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 768px) {

@@ -11,6 +11,7 @@ import SaveModal from './components/SaveModal.vue'
 import CardCollection from './components/CardCollection.vue'
 import HistoryPanel from './components/HistoryPanel.vue'
 import GiftModal from './components/GiftModal.vue'
+import ClueTracker from './components/ClueTracker.vue'
 
 const gameStore = useGameStore()
 const saveStore = useSaveStore()
@@ -19,6 +20,7 @@ const showSaveModal = ref(false)
 const showCards = ref(false)
 const showHistory = ref(false)
 const showGiftModal = ref(false)
+const showClues = ref(false)
 
 const theme = computed(() => gameStore.darkMode ? 'dark' : 'light')
 
@@ -52,13 +54,14 @@ onMounted(() => {
       @toggle-save="showSaveModal = true"
       @toggle-cards="showCards = true"
       @toggle-history="showHistory = true"
+      @toggle-clues="showClues = true"
       @toggle-theme="gameStore.toggleDarkMode()"
       @reset="gameStore.resetGame()"
     />
     
     <div class="main-content">
       <div class="left-column">
-        <CharacterPanel />
+        <CharacterPanel @toggle-clues="showClues = true" />
         <ActionPanel @open-gift="showGiftModal = true" />
       </div>
       
@@ -72,6 +75,7 @@ onMounted(() => {
     <CardCollection v-if="showCards" @close="showCards = false" />
     <HistoryPanel v-if="showHistory" @close="showHistory = false" />
     <GiftModal v-if="showGiftModal" @close="showGiftModal = false" />
+    <ClueTracker v-if="showClues" @close="showClues = false" />
   </div>
 </template>
 

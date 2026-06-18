@@ -202,30 +202,31 @@ export const gameConfig: GameConfig = {
     },
     {
       id: 'mysterious_girl',
-      title: '神秘的转学生',
-      description: '在公园的角落里，你看到一个安静的女生独自坐在长椅上。她似乎注意到了你，微微点了点头。',
+      title: '月下身影',
+      description: '根据收集到的线索，你来到公园。月光下，一个熟悉的身影独自坐在长椅上。她就是你一直在寻找的人——叶青。',
       characterId: 'yeqing',
-      triggerCondition: { minDay: 7, minAffinity: 40 },
+      triggerCondition: { minDay: 7, minAffinity: 30, requiredFlags: ['yeqing_all_clues_collected'] },
       choices: [
         {
           id: 'approach',
-          text: '上前打招呼',
+          text: '上前打招呼，说出你对她的了解',
           effects: [
-            { characterId: 'yeqing', affinityChange: 5 },
-            { characterId: 'linxiaoyu', affinityChange: -3 },
-            { characterId: 'sufei', affinityChange: -3 }
+            { characterId: 'yeqing', affinityChange: 10 },
+            { characterId: 'linxiaoyu', affinityChange: -2 },
+            { characterId: 'sufei', affinityChange: -2 }
           ],
           unlockCharacterId: 'yeqing',
           addCardId: 'yeqing_common_1'
         },
         {
-          id: 'leave_quietly',
-          text: '悄悄离开',
-          effects: []
+          id: 'observe',
+          text: '在远处默默观察',
+          effects: [{ characterId: 'yeqing', affinityChange: 3 }],
+          addFlag: 'yeqing_observed'
         }
       ],
       once: true,
-      priority: 80
+      priority: 95
     },
     {
       id: 'birthday_surprise_1',
@@ -296,6 +297,96 @@ export const gameConfig: GameConfig = {
       ],
       once: true,
       priority: 88
+    },
+    {
+      id: 'library_bookmark',
+      title: '图书馆的发现',
+      description: '你在图书馆的一本书中发现了一张精致的书签，上面用清秀的字迹写着一句诗。',
+      characterId: 'linxiaoyu',
+      triggerCondition: { minDay: 3, maxDay: 6, timeOfDay: 'morning', minAffinity: 20, characterId: 'linxiaoyu' },
+      choices: [
+        {
+          id: 'ask_xiaoyu',
+          text: '问问小雨这是谁的',
+          effects: [{ characterId: 'linxiaoyu', affinityChange: 3 }],
+          addClueId: 'yeqing_clue_4'
+        },
+        {
+          id: 'keep_it',
+          text: '先收起来，以后再说',
+          effects: []
+        }
+      ],
+      once: true,
+      priority: 80
+    },
+    {
+      id: 'night_piano',
+      title: '深夜琴声',
+      description: '深夜回家的路上，你听到公园深处传来优美的钢琴声，在月光下回荡。',
+      triggerCondition: { minDay: 4, maxDay: 6, timeOfDay: 'night' },
+      choices: [
+        {
+          id: 'investigate',
+          text: '循着声音去看看',
+          effects: [],
+          addClueId: 'yeqing_clue_3'
+        },
+        {
+          id: 'go_home',
+          text: '太晚了，还是回家吧',
+          effects: []
+        }
+      ],
+      once: true,
+      priority: 75
+    },
+    {
+      id: 'transfer_student_rumor',
+      title: '神秘转学生',
+      description: '林小雨和苏菲闲聊时提到，最近学校来了一位神秘的转学生，总是独来独往。',
+      triggerCondition: { minDay: 5, maxDay: 7, minAffinity: 30, characterId: 'linxiaoyu', requiredFlags: ['yeqing_clue_1_collected', 'yeqing_clue_2_collected'] },
+      choices: [
+        {
+          id: 'ask_more',
+          text: '详细问问关于她的事',
+          effects: [
+            { characterId: 'linxiaoyu', affinityChange: 2 },
+            { characterId: 'sufei', affinityChange: 2 }
+          ],
+          addFlag: 'heard_about_transfer',
+          addClueId: 'yeqing_clue_5'
+        },
+        {
+          id: 'not_interested',
+          text: '哦，听起来不太有趣',
+          effects: []
+        }
+      ],
+      once: true,
+      priority: 85
+    },
+    {
+      id: 'sufei_talk_about_customer',
+      title: '咖啡馆的稀客',
+      description: '苏菲整理杯子时忽然说：「说起来，最近有个很特别的客人呢...」',
+      characterId: 'sufei',
+      triggerCondition: { minDay: 3, maxDay: 5, timeOfDay: 'afternoon', minAffinity: 25, characterId: 'sufei' },
+      choices: [
+        {
+          id: 'curious',
+          text: '哦？是什么样的人？',
+          effects: [{ characterId: 'sufei', affinityChange: 3 }],
+          addClueId: 'yeqing_clue_2'
+        },
+        {
+          id: 'busy',
+          text: '我先点单吧',
+          effects: []
+        }
+      ],
+      once: true,
+      priority: 82
     }
   ],
 
@@ -305,7 +396,75 @@ export const gameConfig: GameConfig = {
     { type: 'work', name: '打工', icon: '💼', description: '辛苦工作赚取代币', energyCost: 2 }
   ],
 
-  workRewards: { min: 15, max: 35 }
+  workRewards: { min: 15, max: 35 },
+
+  clues: [
+    {
+      id: 'yeqing_clue_1',
+      name: '图书馆的神秘身影',
+      description: '林小雨提到，最近图书馆常有一位气质清冷的女生，总是坐在靠窗的角落看书，很少与人说话。',
+      icon: '📚',
+      characterId: 'yeqing',
+      hint: '和林小雨聊「文学」时或许能了解更多',
+      unlockCondition: {
+        type: 'chat',
+        value: '文学',
+        characterId: 'linxiaoyu',
+        minAffinity: 15
+      }
+    },
+    {
+      id: 'yeqing_clue_2',
+      name: '咖啡馆的稀客',
+      description: '苏菲说有位奇怪的客人，每天傍晚都会来点一杯不加糖的美式，坐在角落里听音乐，从不和人交谈。',
+      icon: '☕',
+      characterId: 'yeqing',
+      hint: '提升与苏菲的好感度，她可能会告诉你更多',
+      unlockCondition: {
+        type: 'affinity',
+        value: 25,
+        characterId: 'sufei'
+      }
+    },
+    {
+      id: 'yeqing_clue_3',
+      name: '月夜的琴声',
+      description: '深夜回家时，你听到公园深处传来优美的钢琴声，似乎有人在月光下弹奏。',
+      icon: '🎹',
+      characterId: 'yeqing',
+      hint: '在第4天的夜晚外出或许会有奇遇',
+      unlockCondition: {
+        type: 'day',
+        value: 4,
+        minDay: 4
+      }
+    },
+    {
+      id: 'yeqing_clue_4',
+      name: '遗落的书签',
+      description: '你在图书馆捡到一张精致的书签，上面用清秀的字迹写着一句诗：「明月几时有，把酒问青天」。',
+      icon: '🔖',
+      characterId: 'yeqing',
+      hint: '在图书馆的事件中仔细观察',
+      unlockCondition: {
+        type: 'event',
+        value: 'library_bookmark'
+      }
+    },
+    {
+      id: 'yeqing_clue_5',
+      name: '转学生的传闻',
+      description: '听说学校来了一位神秘的转学生，总是独来独往，有人说她在寻找什么重要的东西。',
+      icon: '🌙',
+      characterId: 'yeqing',
+      hint: '和两位女主角的好感度都达到一定程度后，她们可能会聊起这件事',
+      unlockCondition: {
+        type: 'flag',
+        value: 'heard_about_transfer',
+        requiredFlags: ['heard_about_transfer']
+      }
+    }
+  ]
 }
 
 export default gameConfig
